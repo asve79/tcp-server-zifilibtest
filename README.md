@@ -56,5 +56,8 @@ tcp-server-zifilibtest
   -randomdatasend
     	Generate random data to send (default: false)
       Выходные данные генерируются случайным набором байт
+  -randomdisconnection
+      Emulate lost connection (default: false)
+      Эмитация разрыва соединения. Работает по принципу если случайное число из 100 = 1 то обрываем.
 
 ```

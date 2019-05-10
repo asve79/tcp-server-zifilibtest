@@ -19,7 +19,7 @@ func main() {
 	flagOnlySend := flag.Bool("onlysenddata", false, "Send data only mode")
 	flagOnlyReceve := flag.Bool("onlyrecevedata", false, "Receve data only mode")
 	flagRandomDataSend := flag.Bool("randomdatasend", false, "Generate random data to send")
-
+	flagRandomDisconnection := flag.Bool("randomdisconnection", false, "Emulate lost connection")
 	hostPtr := flag.String("host", "localhost", "listen address")
 	connTypePtr := flag.String("type", "tcp", "type tcp/udp")
 
@@ -35,7 +35,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Receve only mode : %t\n Send only mode : %t\n", *flagOnlyReceve, *flagOnlySend)
+	fmt.Printf("Receve only mode : %t\nSend only mode : %t\n", *flagOnlyReceve, *flagOnlySend)
+	fmt.Printf("Random lost connection emulate : %t\n", *flagRandomDisconnection)
+	fmt.Printf("Random data generator : %t\n", *flagRandomDataSend)
 
 	fmt.Print("Generate data length : ")
 	if *minBlockSizePrt == *minBlockSizePrt {
@@ -62,14 +64,15 @@ func main() {
 		}
 		// Обработчик соединения
 		go handleRequest(conn, id, *delayTime, *minBlockSizePrt, *maxBlockSizePrt,
-			*flagOnlySend, *flagOnlyReceve, *flagRandomDataSend)
+			*flagOnlySend, *flagOnlyReceve, *flagRandomDataSend, *flagRandomDisconnection)
 		id++
 	}
 }
 
 // Handles incoming requests.
 func handleRequest(conn net.Conn, id int, delayTime int, minBlockSizePrt int,
-	maxBlockSizePrt int, onlySend bool, onlyReceve bool, flagRandomDataSend bool) {
+	maxBlockSizePrt int, onlySend bool, onlyReceve bool, flagRandomDataSend bool,
+	flagRandomDisconnection bool) {
 	buf := make([]byte, 16384)
 
 	var arrsize int
@@ -112,5 +115,12 @@ func handleRequest(conn net.Conn, id int, delayTime int, minBlockSizePrt int,
 
 		time.Sleep(time.Duration(delayTime) * time.Second)
 		count++
+
+		//ОБрываем соединение если случайное число из 100 равно 1
+		if flagRandomDisconnection {
+			if rand.Intn(100) == 1 {
+				conn.Close()
+			}
+		}
 	}
 }
