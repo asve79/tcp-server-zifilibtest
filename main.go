@@ -1,62 +1,116 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"math/rand"
 	"net"
 	"os"
 	"strconv"
 	"time"
 )
 
-const (
-	CONN_HOST = "localhost"
-	CONN_PORT = "3333"
-	CONN_TYPE = "tcp"
-)
-
 func main() {
-	var id int = 0
-	// Listen for incoming connections.
-	l, err := net.Listen(CONN_TYPE, CONN_HOST+":"+CONN_PORT)
+
+	portNumPtr := flag.Int("port", 3333, "port number")
+	delayTime := flag.Int("delay", 2, "delay as seconds")
+	minBlockSizePrt := flag.Int("minblocksize", 0, "genetated block size. minimum.")
+	maxBlockSizePrt := flag.Int("maxblocksize", 0, "genetated block size. maximum.")
+	flagOnlySend := flag.Bool("onlysenddata", false, "Send data only mode")
+	flagOnlyReceve := flag.Bool("onlyrecevedata", false, "Receve data only mode")
+	flagRandomDataSend := flag.Bool("randomdatasend", false, "Generate random data to send")
+
+	hostPtr := flag.String("host", "localhost", "listen address")
+	connTypePtr := flag.String("type", "tcp", "type tcp/udp")
+
+	flag.Parse()
+
+	if *minBlockSizePrt > *maxBlockSizePrt {
+		fmt.Println("Check you paramaters! minblocksize > maxblocksize")
+		os.Exit(1)
+	}
+
+	if *flagOnlySend && *flagOnlyReceve {
+		fmt.Println("You cannot set both receve and send modes at one time")
+		os.Exit(1)
+	}
+
+	fmt.Printf("Receve only mode : %t\n Send only mode : %t\n", *flagOnlyReceve, *flagOnlySend)
+
+	fmt.Print("Generate data length : ")
+	if *minBlockSizePrt == *minBlockSizePrt {
+		fmt.Println(strconv.Itoa(*minBlockSizePrt))
+	} else {
+		fmt.Println("from " + strconv.Itoa(*minBlockSizePrt) + " to " + strconv.Itoa(*maxBlockSizePrt))
+	}
+
+	var id int
+	id = 1
+	l, err := net.Listen(*connTypePtr, *hostPtr+":"+strconv.Itoa(*portNumPtr))
 	if err != nil {
 		fmt.Println("Error listening:", err.Error())
 		os.Exit(1)
 	}
-	// Close the listener when the application closes.
 	defer l.Close()
-	fmt.Println("Listening on " + CONN_HOST + ":" + CONN_PORT)
+
+	fmt.Println("Listening on " + *hostPtr + ":" + strconv.Itoa(*portNumPtr))
 	for {
-		// Listen for an incoming connection.
 		conn, err := l.Accept()
 		if err != nil {
 			fmt.Println("Error accepting: ", err.Error())
 			os.Exit(1)
 		}
-		// Handle connections in a new goroutine.
-		go handleRequest(conn, id)
+		// Обработчик соединения
+		go handleRequest(conn, id, *delayTime, *minBlockSizePrt, *maxBlockSizePrt,
+			*flagOnlySend, *flagOnlyReceve, *flagRandomDataSend)
 		id++
 	}
 }
 
 // Handles incoming requests.
-func handleRequest(conn net.Conn, id int) {
-	// Make a buffer to hold incoming data.
-	buf := make([]byte, 1024)
-	count := 0
-	// Read the incoming connection into the buffer.
+func handleRequest(conn net.Conn, id int, delayTime int, minBlockSizePrt int,
+	maxBlockSizePrt int, onlySend bool, onlyReceve bool, flagRandomDataSend bool) {
+	buf := make([]byte, 16384)
+
+	var arrsize int
+	count := 1
 	for {
-		nums, err := conn.Read(buf)
-		if err != nil {
-			fmt.Println("Error reading:", err.Error())
+
+		if !onlySend {
+			conn.SetReadDeadline(time.Now().Add(time.Duration(delayTime) * time.Second))
+			nums, _ := conn.Read(buf)
+			//if err != nil {
+			//	fmt.Println("Error reading:", err.Error())
+			//	continue
+			//}
+
+			if nums > 0 {
+				fmt.Println("Receved:", buf[:nums])
+			} else {
+				fmt.Println("Nothing receved")
+			}
 		}
 
-		if nums > 0 {
-			fmt.Println("Error reading:", buf)
+		if !onlyReceve {
+			if maxBlockSizePrt == minBlockSizePrt {
+				arrsize = maxBlockSizePrt
+			} else {
+				arrsize = rand.Intn(maxBlockSizePrt-minBlockSizePrt) + minBlockSizePrt
+			}
+
+			fmt.Println("Send values: Connection " + strconv.Itoa(id) + " : " + strconv.Itoa(count) + " + " +
+				strconv.Itoa(arrsize) + " byte(s)")
+			conn.Write([]byte("Connection " + strconv.Itoa(id) + " : " + strconv.Itoa(count) + " : "))
+			for j := 0; j < arrsize; j++ {
+				sbyte := []byte("*")
+				if flagRandomDataSend {
+					rand.Read(sbyte)
+				}
+				conn.Write([]byte(sbyte))
+			}
 		}
-		// Send a response back to person contacting us.
-		conn.Write([]byte("Connection " + strconv.FormatInt(id, 10) + " : " + strconv.FormatInt(count, 10)))
-		// Close the connection when you're done with it.
-		//conn.Close()
-		time.Sleep(2 * time.Second)
+
+		time.Sleep(time.Duration(delayTime) * time.Second)
+		count++
 	}
 }
