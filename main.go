@@ -66,6 +66,7 @@ func main() {
 		go handleRequest(conn, id, *delayTime, *minBlockSizePrt, *maxBlockSizePrt,
 			*flagOnlySend, *flagOnlyReceve, *flagRandomDataSend, *flagRandomDisconnection)
 		id++
+
 	}
 }
 
@@ -101,15 +102,25 @@ func handleRequest(conn net.Conn, id int, delayTime int, minBlockSizePrt int,
 				arrsize = rand.Intn(maxBlockSizePrt-minBlockSizePrt) + minBlockSizePrt
 			}
 
-			fmt.Println("Send values: Connection " + strconv.Itoa(id) + " : " + strconv.Itoa(count) + " + " +
+			fmt.Println("Send values: Connection " + strconv.Itoa(id) + ". Send iteration " + strconv.Itoa(count) + " + " +
 				strconv.Itoa(arrsize) + " byte(s)")
-			conn.Write([]byte("Connection " + strconv.Itoa(id) + " : " + strconv.Itoa(count) + " : "))
+			_, err := conn.Write([]byte("Connection " + strconv.Itoa(id) + ". Send iteration " + strconv.Itoa(count) + " : "))
+			if err != nil {
+				fmt.Println("Error send data. Close connection.")
+				conn.Close()
+				break
+			}
 			for j := 0; j < arrsize; j++ {
 				sbyte := []byte("*")
 				if flagRandomDataSend {
 					rand.Read(sbyte)
 				}
-				conn.Write([]byte(sbyte))
+				_, err := conn.Write([]byte(sbyte))
+				if err != nil {
+					fmt.Println("Error send data. Close connection.")
+					conn.Close()
+					break
+				}
 			}
 		}
 
