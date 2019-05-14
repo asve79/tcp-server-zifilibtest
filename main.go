@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io"
 	"math/rand"
 	"net"
 	"os"
@@ -75,19 +74,13 @@ func main() {
 func handleRequest(conn net.Conn, id int, delayTime int, minBlockSizePrt int,
 	maxBlockSizePrt int, onlySend bool, onlyReceve bool, flagRandomDataSend bool,
 	flagRandomDisconnection bool) {
-
 	buf := make([]byte, 16384)
 
 	var arrsize int
 	count := 1
 	for {
-		if !onlySend {
-			_, err := conn.Read(make([]byte, 0))
-			if err != io.EOF {
-				fmt.Println("connection closed....", err)
-				break
-			}
 
+		if !onlySend {
 			conn.SetReadDeadline(time.Now().Add(time.Duration(delayTime) * time.Second))
 			nums, _ := conn.Read(buf)
 			//if err != nil {
