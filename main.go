@@ -13,6 +13,7 @@ import (
 
 func main() {
 
+	//Берем параметры из коммандной строки
 	portNumPtr := flag.Int("port", 3333, "port number")
 	delayTime := flag.Int("delay", 2, "delay as seconds")
 	minBlockSizePrt := flag.Int("minblocksize", 0, "genetated block size. minimum.")
@@ -26,6 +27,7 @@ func main() {
 
 	flag.Parse()
 
+	//Предосторочности
 	if *minBlockSizePrt > *maxBlockSizePrt {
 		fmt.Println("Check you paramaters! minblocksize > maxblocksize")
 		os.Exit(1)
@@ -56,6 +58,7 @@ func main() {
 	}
 	defer l.Close()
 
+	//Вечный цикл ожидания
 	fmt.Println("Listening on " + *hostPtr + ":" + strconv.Itoa(*portNumPtr))
 	for {
 		conn, err := l.Accept()
@@ -81,8 +84,9 @@ func handleRequest(conn net.Conn, id int, delayTime int, minBlockSizePrt int,
 	var arrsize int
 	count := 1
 	for {
-		if !onlySend {
+		if !onlySend { //Если не режим "только отправлять""
 
+			//Ставим таймаут чтобы бесконечно не хдать прихода данных
 			conn.SetReadDeadline(time.Now().Add(time.Duration(delayTime) * time.Second))
 
 			nums, err := conn.Read(buf)
@@ -90,21 +94,21 @@ func handleRequest(conn net.Conn, id int, delayTime int, minBlockSizePrt int,
 			if nums > 0 {
 				fmt.Println("Receved:", buf[:nums])
 			} else {
-				if err == io.EOF {
+				if err == io.EOF { //Если обрыв соединения
 					fmt.Println("Lose connection " + strconv.Itoa(id))
 					conn.Close()
 					break
-				} else {
+				} else { //А это если просто ниченго не пришло
 					fmt.Println("Nothing receved")
 				}
 			}
 		}
 
-		if !onlyReceve {
+		if !onlyReceve { //Если не режим "только отправка"
 			if maxBlockSizePrt == minBlockSizePrt {
-				arrsize = maxBlockSizePrt
+				arrsize = maxBlockSizePrt //Если размер блока фиксированой длины
 			} else {
-				arrsize = rand.Intn(maxBlockSizePrt-minBlockSizePrt) + minBlockSizePrt
+				arrsize = rand.Intn(maxBlockSizePrt-minBlockSizePrt) + minBlockSizePrt //Если размер блока рандомной длины
 			}
 
 			fmt.Println("Send values: Connection " + strconv.Itoa(id) + ". Send iteration " + strconv.Itoa(count) + " + " +
@@ -115,7 +119,7 @@ func handleRequest(conn net.Conn, id int, delayTime int, minBlockSizePrt int,
 				conn.Close()
 				break
 			}
-			for j := 0; j < arrsize; j++ {
+			for j := 0; j < arrsize; j++ { //Этим циклом генерируем данные в буфер
 				sbyte := []byte("*")
 				if flagRandomDataSend {
 					rand.Read(sbyte)
@@ -129,10 +133,10 @@ func handleRequest(conn net.Conn, id int, delayTime int, minBlockSizePrt int,
 			}
 		}
 
-		time.Sleep(time.Duration(delayTime) * time.Second)
+		time.Sleep(time.Duration(delayTime) * time.Second) //Ждем сколько-то секунд
 		count++
 
-		//ОБрываем соединение если случайное число из 100 равно 1
+		//ОБрываем соединение если включен режим имитации обрава и случайное число из 100 равно 1
 		if flagRandomDisconnection {
 			if rand.Intn(100) == 1 {
 				conn.Close()
